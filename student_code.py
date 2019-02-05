@@ -116,29 +116,114 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
+    def remove_helper(self, fact):
+
+        # helper function to aid in kb_retract
+
+
+
+        if isinstance(fact, Fact):   
+            if fact in self.facts:  
+  
+                fact = self._get_fact(fact)  
+                fac_sup = fact.supported_by  
+
+                if len(fac_sup) != 0:  
+  
+                    fact.asserted = False   
+   
+                else:
+                    if fac_sup != False:
+                        for i in fact.supports_facts: 
+
+                            sportsf = self._get_fact(i)  
+                            sportsf_sup = sportsf.supported_by  
+
+                            for j in sportsf_sup:        
+                                if j[0] == fact:  
+
+                                    sportsf_sup.remove(j)   
+
+                            self.remove_helper(sportsf)  
+  
+                        for i in fact.supports_rules:   
+
+                            sportsr = self._get_rule(i)  
+                            sportsr_sup = sportsr.supported_by    
+
+                            for j in sportsr_sup:     
+                                if j[0] == fact:  
+                                    sportsr_sup.remove(j)    
+
+                            self.remove_helper(sportsr)   
+
+                        self.facts.remove(fact)   
+
+        elif isinstance(fact, Rule):    
+            if fact in self.rules:       
+
+                rule = self._get_rule(fact)      
+
+                if (len(rule.supported_by) == 0):      
+                    
+                    for i in rule.supports_rules:   
+                        if (not rule.asserted):      
+
+                            sportsr = self._get_rule(i)     
+                            sportsr_sup = sportsr.supported_by     
+
+                            for j in sportsr_sup:      
+                                if j[1] == rule:     
+
+                                    sportsr_sup.remove(j)      
+
+                            self.remove_helper(sportsr)    
+
+                    self.rules.remove(rule)    
+
+                    for i in rule.supports_facts:  
+                        if (not rule.asserted):   
+  
+                            sportsf = self._get_fact(i)   
+                            sportsf_sup = sportsf.supported_by   
+  
+                            for j in sportsf_sup: 
+                                if j[1] == rule:    
+
+                                    sportsf_sup.remove(j)  
+ 
+                            self.remove_helper(sportsf) 
+
+
     def kb_retract(self, fact):
         """Retract a fact from the KB
-
         Args:
             fact (Fact) - Fact to be retracted
-
         Returns:
             None
         """
         printv("Retracting {!r}", 0, verbose, [fact])
         ####################################################
         # Student code goes here
+        if isinstance(fact, Fact):
+            self.remove_helper(fact) 
+
+
+
+
+
+
+
+
         
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
         """Forward-chaining to infer new facts and rules
-
         Args:
             fact (Fact) - A fact from the KnowledgeBase
             rule (Rule) - A rule from the KnowledgeBase
             kb (KnowledgeBase) - A KnowledgeBase
-
         Returns:
             Nothing            
         """
@@ -146,3 +231,50 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        
+        mach = match(fact.statement, rule.lhs[0])
+        lenth = len(rule.lhs)
+        support = [(fact,rule)]
+
+        if match(fact.statement, rule.lhs[0]) != False:
+
+            if lenth==1:
+
+                if isinstance(rule,Rule):
+
+                     if isinstance(fact,Fact):
+
+                        insta = instantiate(rule.rhs, mach)
+                        infact = Fact(insta, support)
+
+                        fact.supports_facts.append(infact)
+                        rule.supports_facts.append(infact)
+
+                        kb.kb_add(infact)
+
+            else:
+
+                if isinstance(rule,Rule):
+
+                     if isinstance(fact,Fact):
+
+                        inferred_lhs = []
+                        leth = len(rule.lhs)
+
+                        for i in rule.lhs[1:leth]:
+
+                            inbind = instantiate(i, mach)
+                            inferred_lhs.append(inbind)
+
+                        inferred_rhs = instantiate(rule.rhs, mach)
+                        inferred_rule = Rule([inferred_lhs, inferred_rhs], support)
+                        fact.supports_rules.append(inferred_rule)
+                        rule.supports_rules.append(inferred_rule)
+                        kb.kb_add(inferred_rule)
+
+
+
+
+
+
+
